@@ -8,6 +8,8 @@ let categories = ['Unterricht', 'Feedback', 'Differenzierung', 'Schulentwicklung
 let selectedCategory = null;
 let currentPromptForVariables = null;
 let lastBackupDate = null;
+let autoSaveTimeout = null;
+let isSyncing = false;
 
 // API Base URL (wird automatisch erkannt)
 const API_URL = '/.netlify/functions/prompts';
@@ -16,11 +18,15 @@ const API_URL = '/.netlify/functions/prompts';
 // INITIALIZATION
 // ========================================
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Erst lokale Daten laden (als Fallback)
     loadFromLocalStorage();
     renderCategories();
     renderPrompts();
     updateBackupStatus();
+
+    // Dann aus Cloud laden (überschreibt lokale Daten)
+    await loadFromCloud(true); // true = silent mode (kein Toast)
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -59,12 +65,34 @@ function saveToLocalStorage() {
 }
 
 // ========================================
+// AUTO-SAVE
+// ========================================
+
+function triggerAutoSave() {
+    // Bestehenden Timer löschen
+    if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+    }
+
+    // Neuen Timer starten (1.5 Sekunden Verzögerung)
+    autoSaveTimeout = setTimeout(() => {
+        saveToCloud(true); // true = silent mode
+    }, 1500);
+}
+
+// ========================================
 // CLOUD SYNC
 // ========================================
 
-async function saveToCloud() {
+async function saveToCloud(silent = false) {
+    if (isSyncing) return;
+    isSyncing = true;
+
     try {
-        showToast('Speichere in Cloud...');
+        if (!silent) {
+            showToast('Speichere in Cloud...');
+        }
+        updateSyncStatus('syncing');
 
         const response = await fetch(API_URL, {
             method: 'POST',
@@ -85,22 +113,40 @@ async function saveToCloud() {
         lastBackupDate = new Date();
         saveToLocalStorage();
         updateBackupStatus();
-        showToast('Erfolgreich in Cloud gespeichert!');
+        updateSyncStatus('synced');
+
+        if (!silent) {
+            showToast('Erfolgreich in Cloud gespeichert!');
+        }
     } catch (error) {
         console.error('Cloud save error:', error);
-        showToast('Fehler beim Speichern in Cloud. Lokale Kopie ist sicher.');
+        updateSyncStatus('error');
+        if (!silent) {
+            showToast('Fehler beim Speichern in Cloud. Lokale Kopie ist sicher.');
+        }
+    } finally {
+        isSyncing = false;
     }
 }
 
-async function loadFromCloud() {
+async function loadFromCloud(silent = false) {
+    if (isSyncing) return;
+    isSyncing = true;
+
     try {
-        showToast('Lade aus Cloud...');
+        if (!silent) {
+            showToast('Lade aus Cloud...');
+        }
+        updateSyncStatus('syncing');
 
         const response = await fetch(API_URL);
 
         if (!response.ok) {
             if (response.status === 404) {
-                showToast('Keine Cloud-Daten gefunden. Starte neu.');
+                if (!silent) {
+                    showToast('Keine Cloud-Daten gefunden. Starte neu.');
+                }
+                updateSyncStatus('synced');
                 return;
             }
             throw new Error('Fehler beim Laden');
@@ -108,10 +154,10 @@ async function loadFromCloud() {
 
         const data = await response.json();
 
-        if (data.prompts) {
+        if (data.prompts && data.prompts.length > 0) {
             prompts = data.prompts;
         }
-        if (data.categories) {
+        if (data.categories && data.categories.length > 0) {
             categories = data.categories;
         }
 
@@ -120,10 +166,40 @@ async function loadFromCloud() {
         renderCategories();
         renderPrompts();
         updateBackupStatus();
-        showToast('Erfolgreich aus Cloud geladen!');
+        updateSyncStatus('synced');
+
+        if (!silent) {
+            showToast('Erfolgreich aus Cloud geladen!');
+        }
     } catch (error) {
         console.error('Cloud load error:', error);
-        showToast('Fehler beim Laden aus Cloud. Nutze lokale Daten.');
+        updateSyncStatus('error');
+        if (!silent) {
+            showToast('Fehler beim Laden aus Cloud. Nutze lokale Daten.');
+        }
+    } finally {
+        isSyncing = false;
+    }
+}
+
+function updateSyncStatus(status) {
+    const statusEl = document.getElementById('backupStatus');
+    const dotEl = statusEl.querySelector('.backup-dot');
+    const textEl = statusEl.querySelector('.backup-text');
+
+    switch (status) {
+        case 'syncing':
+            dotEl.className = 'backup-dot syncing';
+            textEl.textContent = 'Synchronisiere...';
+            break;
+        case 'synced':
+            dotEl.className = 'backup-dot synced';
+            textEl.textContent = 'Synchronisiert';
+            break;
+        case 'error':
+            dotEl.className = 'backup-dot error';
+            textEl.textContent = 'Sync-Fehler';
+            break;
     }
 }
 
@@ -139,20 +215,25 @@ function updateBackupStatus() {
     }
 
     const now = new Date();
-    const diffDays = Math.floor((now - lastBackupDate) / (1000 * 60 * 60 * 24));
+    const diffMs = now - lastBackupDate;
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 0) {
+    if (diffMins < 1) {
         dotEl.className = 'backup-dot synced';
-        textEl.textContent = 'Backup: heute';
+        textEl.textContent = 'Gerade synchronisiert';
+    } else if (diffMins < 60) {
+        dotEl.className = 'backup-dot synced';
+        textEl.textContent = `Sync: vor ${diffMins} Min`;
+    } else if (diffDays === 0) {
+        dotEl.className = 'backup-dot synced';
+        textEl.textContent = 'Sync: heute';
     } else if (diffDays === 1) {
-        dotEl.className = 'backup-dot synced';
-        textEl.textContent = 'Backup: gestern';
-    } else if (diffDays < 7) {
         dotEl.className = 'backup-dot warning';
-        textEl.textContent = `Backup: vor ${diffDays} Tagen`;
+        textEl.textContent = 'Sync: gestern';
     } else {
         dotEl.className = 'backup-dot error';
-        textEl.textContent = `Backup: vor ${diffDays} Tagen`;
+        textEl.textContent = `Sync: vor ${diffDays} Tagen`;
     }
 }
 
@@ -225,6 +306,7 @@ function addCategory() {
 
     categories.push(name);
     saveToLocalStorage();
+    triggerAutoSave(); // Auto-Save
     renderCategories();
     closeCategoryModal();
     showToast('Kategorie hinzugefügt');
@@ -243,6 +325,7 @@ function deleteCategory(category) {
     }
 
     saveToLocalStorage();
+    triggerAutoSave(); // Auto-Save
     renderCategories();
     renderPrompts();
     showToast('Kategorie gelöscht');
@@ -480,6 +563,7 @@ function savePrompt() {
     }
 
     saveToLocalStorage();
+    triggerAutoSave(); // Auto-Save
     renderCategories();
     renderPrompts();
     closePromptModal();
@@ -492,6 +576,7 @@ function deletePrompt(id) {
 
     prompts = prompts.filter(p => p.id !== id);
     saveToLocalStorage();
+    triggerAutoSave(); // Auto-Save
     renderCategories();
     renderPrompts();
     showToast('Prompt gelöscht');
@@ -613,6 +698,7 @@ function restoreVersion(promptId, versionIndex) {
 
     prompts = prompts.map(p => p.id === promptId ? updatedPrompt : p);
     saveToLocalStorage();
+    triggerAutoSave(); // Auto-Save
     renderPrompts();
     closeVersionModal();
     showToast('Version wiederhergestellt');
@@ -688,6 +774,7 @@ function handleFileImport(event) {
             }
 
             saveToLocalStorage();
+            triggerAutoSave(); // Auto-Save
             renderCategories();
             renderPrompts();
         } catch (error) {
