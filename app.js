@@ -1,5 +1,5 @@
 // ========================================
-// PROMPT-BIBLIOTHEK - App Logic
+// PROMPT-BIBLIOTHEK JF - App Logic
 // ========================================
 
 // State
@@ -7,6 +7,7 @@ let prompts = [];
 let categories = ['Unterricht', 'Feedback', 'Differenzierung', 'Schulentwicklung', 'Überarbeitung eigener Texte'];
 let selectedCategory = null;
 let currentPromptForVariables = null;
+let currentViewPromptId = null;
 let lastBackupDate = null;
 let autoSaveTimeout = null;
 let isSyncing = false;
@@ -32,6 +33,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
             closeAllModals();
+        }
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.dropdown')) {
+            closeExportDropdown();
+            closeSingleExportDropdown();
         }
     });
 });
@@ -238,6 +247,32 @@ function updateBackupStatus() {
 }
 
 // ========================================
+// DROPDOWN MENUS
+// ========================================
+
+function toggleExportDropdown() {
+    const dropdown = document.getElementById('exportDropdown');
+    dropdown.classList.toggle('active');
+    closeSingleExportDropdown();
+}
+
+function closeExportDropdown() {
+    const dropdown = document.getElementById('exportDropdown');
+    dropdown.classList.remove('active');
+}
+
+function toggleSingleExportDropdown() {
+    const dropdown = document.getElementById('singleExportDropdown');
+    dropdown.classList.toggle('active');
+    closeExportDropdown();
+}
+
+function closeSingleExportDropdown() {
+    const dropdown = document.getElementById('singleExportDropdown');
+    dropdown.classList.remove('active');
+}
+
+// ========================================
 // CATEGORIES
 // ========================================
 
@@ -251,14 +286,34 @@ function renderCategories() {
         </div>
     `;
 
-    // Category items
-    categories.forEach(cat => {
+    // Category items with edit and move buttons
+    categories.forEach((cat, index) => {
         const count = prompts.filter(p => p.category === cat).length;
         html += `
-            <div class="category-item ${selectedCategory === cat ? 'active' : ''}" onclick="selectCategory('${cat}')">
-                <span>${cat} (${count})</span>
+            <div class="category-item ${selectedCategory === cat ? 'active' : ''}" onclick="selectCategory('${escapeHtml(cat).replace(/'/g, "\\'")}')">
+                <span>${escapeHtml(cat)} (${count})</span>
                 <div class="category-actions">
-                    <button class="category-action-btn" onclick="event.stopPropagation(); deleteCategory('${cat}')" title="Löschen">
+                    ${index > 0 ? `
+                        <button class="category-action-btn move-btn" onclick="event.stopPropagation(); moveCategoryUp(${index})" title="Nach oben">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="18 15 12 9 6 15"></polyline>
+                            </svg>
+                        </button>
+                    ` : ''}
+                    ${index < categories.length - 1 ? `
+                        <button class="category-action-btn move-btn" onclick="event.stopPropagation(); moveCategoryDown(${index})" title="Nach unten">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                    ` : ''}
+                    <button class="category-action-btn edit-btn" onclick="event.stopPropagation(); openEditCategoryModal(${index})" title="Bearbeiten">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="category-action-btn delete-btn" onclick="event.stopPropagation(); deleteCategory('${escapeHtml(cat).replace(/'/g, "\\'")}')" title="Löschen">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="3 6 5 6 21 6"></polyline>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
@@ -282,8 +337,20 @@ function selectCategory(category) {
 }
 
 function openAddCategoryModal() {
-    document.getElementById('categoryModal').classList.add('active');
+    document.getElementById('categoryModalTitle').textContent = 'Neue Kategorie';
+    document.getElementById('categoryModalSaveBtn').textContent = 'Hinzufügen';
+    document.getElementById('editCategoryIndex').value = '';
     document.getElementById('newCategoryName').value = '';
+    document.getElementById('categoryModal').classList.add('active');
+    document.getElementById('newCategoryName').focus();
+}
+
+function openEditCategoryModal(index) {
+    document.getElementById('categoryModalTitle').textContent = 'Kategorie bearbeiten';
+    document.getElementById('categoryModalSaveBtn').textContent = 'Speichern';
+    document.getElementById('editCategoryIndex').value = index;
+    document.getElementById('newCategoryName').value = categories[index];
+    document.getElementById('categoryModal').classList.add('active');
     document.getElementById('newCategoryName').focus();
 }
 
@@ -291,7 +358,8 @@ function closeCategoryModal() {
     document.getElementById('categoryModal').classList.remove('active');
 }
 
-function addCategory() {
+function saveCategory() {
+    const indexStr = document.getElementById('editCategoryIndex').value;
     const name = document.getElementById('newCategoryName').value.trim();
 
     if (!name) {
@@ -299,17 +367,60 @@ function addCategory() {
         return;
     }
 
-    if (categories.includes(name)) {
-        showToast('Diese Kategorie existiert bereits');
-        return;
+    if (indexStr === '') {
+        // Adding new category
+        if (categories.includes(name)) {
+            showToast('Diese Kategorie existiert bereits');
+            return;
+        }
+        categories.push(name);
+        showToast('Kategorie hinzugefügt');
+    } else {
+        // Editing existing category
+        const index = parseInt(indexStr);
+        const oldName = categories[index];
+
+        if (oldName !== name && categories.includes(name)) {
+            showToast('Diese Kategorie existiert bereits');
+            return;
+        }
+
+        // Update prompts with old category name
+        prompts = prompts.map(p => p.category === oldName ? { ...p, category: name } : p);
+        categories[index] = name;
+
+        if (selectedCategory === oldName) {
+            selectedCategory = name;
+        }
+
+        showToast('Kategorie umbenannt');
     }
 
-    categories.push(name);
     saveToLocalStorage();
-    triggerAutoSave(); // Auto-Save
+    triggerAutoSave();
     renderCategories();
+    renderPrompts();
     closeCategoryModal();
-    showToast('Kategorie hinzugefügt');
+}
+
+function addCategory() {
+    saveCategory();
+}
+
+function moveCategoryUp(index) {
+    if (index <= 0) return;
+    [categories[index - 1], categories[index]] = [categories[index], categories[index - 1]];
+    saveToLocalStorage();
+    triggerAutoSave();
+    renderCategories();
+}
+
+function moveCategoryDown(index) {
+    if (index >= categories.length - 1) return;
+    [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
+    saveToLocalStorage();
+    triggerAutoSave();
+    renderCategories();
 }
 
 function deleteCategory(category) {
@@ -325,7 +436,7 @@ function deleteCategory(category) {
     }
 
     saveToLocalStorage();
-    triggerAutoSave(); // Auto-Save
+    triggerAutoSave();
     renderCategories();
     renderPrompts();
     showToast('Kategorie gelöscht');
@@ -334,7 +445,7 @@ function deleteCategory(category) {
 function updateCategoryDropdown() {
     const select = document.getElementById('promptCategory');
     select.innerHTML = '<option value="">Kategorie wählen</option>' +
-        categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+        categories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('');
 }
 
 // ========================================
@@ -397,6 +508,12 @@ function createPromptCard(prompt) {
                     </div>
                 </div>
                 <div class="prompt-actions">
+                    <button class="prompt-action-btn view" onclick="openViewModal('${prompt.id}')" title="Vollansicht">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
                     ${hasVersions ? `
                         <button class="prompt-action-btn" onclick="showVersionHistory('${prompt.id}')" title="${prompt.versions.length} Version(en)">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -425,7 +542,7 @@ function createPromptCard(prompt) {
                     </button>
                 </div>
             </div>
-            <div class="prompt-content">${escapeHtml(prompt.content)}</div>
+            <div class="prompt-content" onclick="openViewModal('${prompt.id}')">${escapeHtml(prompt.content)}</div>
             <div class="prompt-footer">
                 <div class="prompt-info">
                     <span>Lizenz: ${escapeHtml(prompt.license || 'CC BY 4.0')}</span>
@@ -440,6 +557,113 @@ function createPromptCard(prompt) {
 
 function filterPrompts() {
     renderPrompts();
+}
+
+// ========================================
+// VIEW MODAL (Vollansicht)
+// ========================================
+
+function openViewModal(id) {
+    const prompt = prompts.find(p => p.id === id);
+    if (!prompt) return;
+
+    currentViewPromptId = id;
+    document.getElementById('viewModalTitle').textContent = prompt.title;
+
+    const variables = extractVariables(prompt.content);
+    const meta = prompt.metadata || {};
+
+    let html = `
+        <div class="view-prompt-meta">
+            ${prompt.category ? `<span class="prompt-category">${escapeHtml(prompt.category)}</span>` : ''}
+            ${(prompt.tags || []).map(tag => `<span class="prompt-tag">${escapeHtml(tag)}</span>`).join('')}
+        </div>
+        <div class="view-prompt-content">${escapeHtml(prompt.content)}</div>
+        <div class="view-prompt-info">
+            <div class="view-info-row">
+                <span><strong>Lizenz:</strong> ${escapeHtml(prompt.license || 'CC BY 4.0')}</span>
+                ${prompt.author ? `<span><strong>Autor:</strong> ${escapeHtml(prompt.author)}</span>` : ''}
+            </div>
+            ${meta.targetAudience || meta.subject || meta.difficulty || meta.timeRequired ? `
+                <div class="view-info-row">
+                    ${meta.targetAudience ? `<span><strong>Zielgruppe:</strong> ${escapeHtml(meta.targetAudience)}</span>` : ''}
+                    ${meta.subject ? `<span><strong>Fachbereich:</strong> ${escapeHtml(meta.subject)}</span>` : ''}
+                    ${meta.difficulty ? `<span><strong>Schwierigkeit:</strong> ${escapeHtml(meta.difficulty)}</span>` : ''}
+                    ${meta.timeRequired ? `<span><strong>Zeitaufwand:</strong> ${escapeHtml(meta.timeRequired)}</span>` : ''}
+                </div>
+            ` : ''}
+            ${variables.length > 0 ? `
+                <div class="view-info-row">
+                    <span class="prompt-variables"><strong>Variablen:</strong> ${variables.join(', ')}</span>
+                </div>
+            ` : ''}
+            <div class="view-info-row">
+                <span><strong>Erstellt:</strong> ${formatDate(prompt.created)}</span>
+                <span><strong>Geändert:</strong> ${formatDate(prompt.lastModified || prompt.created)}</span>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('viewModalBody').innerHTML = html;
+    document.getElementById('viewModal').classList.add('active');
+}
+
+function closeViewModal() {
+    document.getElementById('viewModal').classList.remove('active');
+    currentViewPromptId = null;
+    closeSingleExportDropdown();
+}
+
+function copyCurrentPrompt() {
+    if (!currentViewPromptId) return;
+    copyPrompt(currentViewPromptId);
+}
+
+// ========================================
+// SINGLE PROMPT EXPORT
+// ========================================
+
+function exportSinglePromptMD() {
+    if (!currentViewPromptId) return;
+    const prompt = prompts.find(p => p.id === currentViewPromptId);
+    if (!prompt) return;
+
+    let md = `# ${prompt.title}\n\n`;
+    if (prompt.category) md += `**Kategorie:** ${prompt.category}\n\n`;
+    if (prompt.tags && prompt.tags.length > 0) md += `**Tags:** ${prompt.tags.join(', ')}\n\n`;
+    md += `**Lizenz:** ${prompt.license || 'CC BY 4.0'}\n\n`;
+    if (prompt.author) md += `**Autor:** ${prompt.author}\n\n`;
+
+    const meta = prompt.metadata || {};
+    if (meta.targetAudience) md += `**Zielgruppe:** ${meta.targetAudience}\n\n`;
+    if (meta.subject) md += `**Fachbereich:** ${meta.subject}\n\n`;
+    if (meta.difficulty) md += `**Schwierigkeit:** ${meta.difficulty}\n\n`;
+    if (meta.timeRequired) md += `**Zeitaufwand:** ${meta.timeRequired}\n\n`;
+
+    md += `## Prompt\n\n\`\`\`\n${prompt.content}\n\`\`\`\n`;
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const safeTitle = prompt.title.replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, '_').substring(0, 50);
+    downloadBlob(blob, `${safeTitle}.md`);
+    showToast('Prompt als Markdown exportiert');
+    closeSingleExportDropdown();
+}
+
+function exportSinglePromptJSON() {
+    if (!currentViewPromptId) return;
+    const prompt = prompts.find(p => p.id === currentViewPromptId);
+    if (!prompt) return;
+
+    const data = {
+        prompt: prompt,
+        exportDate: new Date().toISOString()
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const safeTitle = prompt.title.replace(/[^a-zA-Z0-9äöüÄÖÜß\-_]/g, '_').substring(0, 50);
+    downloadBlob(blob, `${safeTitle}.json`);
+    showToast('Prompt als JSON exportiert');
+    closeSingleExportDropdown();
 }
 
 // ========================================
@@ -563,7 +787,7 @@ function savePrompt() {
     }
 
     saveToLocalStorage();
-    triggerAutoSave(); // Auto-Save
+    triggerAutoSave();
     renderCategories();
     renderPrompts();
     closePromptModal();
@@ -576,7 +800,7 @@ function deletePrompt(id) {
 
     prompts = prompts.filter(p => p.id !== id);
     saveToLocalStorage();
-    triggerAutoSave(); // Auto-Save
+    triggerAutoSave();
     renderCategories();
     renderPrompts();
     showToast('Prompt gelöscht');
@@ -698,7 +922,7 @@ function restoreVersion(promptId, versionIndex) {
 
     prompts = prompts.map(p => p.id === promptId ? updatedPrompt : p);
     saveToLocalStorage();
-    triggerAutoSave(); // Auto-Save
+    triggerAutoSave();
     renderPrompts();
     closeVersionModal();
     showToast('Version wiederhergestellt');
@@ -718,10 +942,11 @@ function exportJSON() {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     downloadBlob(blob, `prompts_${formatDateForFile(new Date())}.json`);
     showToast('JSON exportiert');
+    closeExportDropdown();
 }
 
 function exportMarkdown() {
-    let md = '# Prompt-Bibliothek\n\n';
+    let md = '# Prompt-Bibliothek JF\n\n';
     md += `Exportiert am: ${formatDate(new Date().toISOString())}\n\n`;
     md += '---\n\n';
 
@@ -738,6 +963,7 @@ function exportMarkdown() {
     const blob = new Blob([md], { type: 'text/markdown' });
     downloadBlob(blob, `prompts_${formatDateForFile(new Date())}.md`);
     showToast('Markdown exportiert');
+    closeExportDropdown();
 }
 
 function importJSON() {
@@ -774,7 +1000,7 @@ function handleFileImport(event) {
             }
 
             saveToLocalStorage();
-            triggerAutoSave(); // Auto-Save
+            triggerAutoSave();
             renderCategories();
             renderPrompts();
         } catch (error) {
@@ -836,4 +1062,8 @@ function closeAllModals() {
     document.getElementById('categoryModal').classList.remove('active');
     document.getElementById('variablesModal').classList.remove('active');
     document.getElementById('versionModal').classList.remove('active');
+    document.getElementById('viewModal').classList.remove('active');
+    closeExportDropdown();
+    closeSingleExportDropdown();
+    currentViewPromptId = null;
 }
