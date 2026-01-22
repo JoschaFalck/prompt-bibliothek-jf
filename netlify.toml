@@ -1,0 +1,25 @@
+# Netlify Konfiguration für Prompt-Bibliothek
+
+[build]
+  # Kein Build-Schritt nötig - statische Dateien
+  publish = "."
+
+[functions]
+  # Netlify Functions Verzeichnis
+  directory = "netlify/functions"
+  # Node.js Version
+  node_bundler = "esbuild"
+
+# Redirects für SPA-Routing (falls später benötigt)
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Headers für Sicherheit
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

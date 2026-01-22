@@ -1,0 +1,9 @@
+{
+  "name": "prompt-bibliothek",
+  "version": "1.0.0",
+  "description": "Persönliche Prompt-Bibliothek für Lehrer und Fortbildner",
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^8.0.0"
+  }
+}
