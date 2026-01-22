@@ -124,6 +124,16 @@ body {
     background: var(--danger);
 }
 
+.backup-dot.syncing {
+    background: var(--primary);
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;
