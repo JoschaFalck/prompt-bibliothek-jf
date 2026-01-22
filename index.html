@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prompt-Bibliothek</title>
+    <title>Prompt-Bibliothek JF</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
                         <line x1="16" y1="17" x2="8" y2="17"></line>
                         <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
-                    <h1>Prompt-Bibliothek</h1>
+                    <h1>Prompt-Bibliothek <span class="logo-suffix">JF</span></h1>
                 </div>
 
                 <div class="header-actions">
@@ -52,26 +52,39 @@
                             <polyline points="17 8 12 3 7 8"></polyline>
                             <line x1="12" y1="3" x2="12" y2="15"></line>
                         </svg>
-                        Import JSON
+                        Import
                     </button>
 
-                    <button class="btn btn-ghost" onclick="exportMarkdown()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Export MD
-                    </button>
-
-                    <button class="btn btn-ghost" onclick="exportJSON()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                        Export JSON
-                    </button>
+                    <!-- Export Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-ghost dropdown-trigger" onclick="toggleExportDropdown()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Export
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="dropdown-menu" id="exportDropdown">
+                            <button class="dropdown-item" onclick="exportMarkdown(); closeExportDropdown()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                Alle als Markdown
+                            </button>
+                            <button class="dropdown-item" onclick="exportJSON(); closeExportDropdown()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                Alle als JSON
+                            </button>
+                        </div>
+                    </div>
 
                     <button class="btn btn-primary" onclick="openAddPromptModal()">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -215,11 +228,11 @@
         </div>
     </div>
 
-    <!-- Add Category Modal -->
+    <!-- Add/Edit Category Modal -->
     <div class="modal-overlay" id="categoryModal">
         <div class="modal modal-small">
             <div class="modal-header">
-                <h2>Neue Kategorie</h2>
+                <h2 id="categoryModalTitle">Neue Kategorie</h2>
                 <button class="modal-close" onclick="closeCategoryModal()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -228,6 +241,7 @@
                 </button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="editCategoryIndex" value="">
                 <div class="form-group">
                     <label for="newCategoryName">Kategoriename</label>
                     <input type="text" id="newCategoryName" placeholder="Z.B. Unterrichtsvorbereitung">
@@ -235,7 +249,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeCategoryModal()">Abbrechen</button>
-                <button class="btn btn-primary" onclick="addCategory()">Hinzufügen</button>
+                <button class="btn btn-primary" id="categoryModalSaveBtn" onclick="saveCategory()">Hinzufügen</button>
             </div>
         </div>
     </div>
@@ -279,6 +293,53 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeVersionModal()">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt View Modal (Vollansicht) -->
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2 id="viewModalTitle">Prompt ansehen</h2>
+                <button class="modal-close" onclick="closeViewModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body" id="viewModalBody">
+                <!-- Prompt content will be rendered here -->
+            </div>
+            <div class="modal-footer">
+                <div class="view-modal-actions">
+                    <div class="dropdown">
+                        <button class="btn btn-secondary dropdown-trigger" onclick="toggleSingleExportDropdown()">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="7 10 12 15 17 10"></polyline>
+                                <line x1="12" y1="15" x2="12" y2="3"></line>
+                            </svg>
+                            Exportieren
+                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-up" id="singleExportDropdown">
+                            <button class="dropdown-item" onclick="exportSinglePromptMD(); closeSingleExportDropdown()">
+                                Als Markdown
+                            </button>
+                            <button class="dropdown-item" onclick="exportSinglePromptJSON(); closeSingleExportDropdown()">
+                                Als JSON
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-ghost" onclick="closeViewModal()">Schließen</button>
+                    <button class="btn btn-primary" onclick="copyCurrentPrompt()">Kopieren</button>
+                </div>
             </div>
         </div>
     </div>
