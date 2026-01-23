@@ -714,7 +714,6 @@ function openViewModal(id) {
     let html = `
         <div class="view-prompt-meta">
             ${prompt.category ? `<span class="prompt-category">${escapeHtml(prompt.category)}</span>` : '<span class="prompt-category-none">Keine Kategorie</span>'}
-            ${(prompt.tags || []).map(tag => `<span class="prompt-tag">${escapeHtml(tag)}</span>`).join('')}
             <div class="dropdown view-move-dropdown">
                 <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); toggleViewMoveDropdown();">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
@@ -729,6 +728,7 @@ function openViewModal(id) {
                     ${moveOptions}
                 </div>
             </div>
+            ${(prompt.tags || []).map(tag => `<span class="prompt-tag">${escapeHtml(tag)}</span>`).join('')}
         </div>
         <div class="view-prompt-content">${escapeHtml(prompt.content)}</div>
         <div class="view-prompt-info">
