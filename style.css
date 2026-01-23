@@ -54,6 +54,11 @@ body {
     flex-direction: column;
 }
 
+.app-container {
+    display: flex;
+    min-height: 100vh;
+}
+
 /* Header */
 .header {
     background: linear-gradient(to right, var(--white), var(--primary-lighter));
@@ -202,6 +207,10 @@ body {
 .btn-sm svg {
     width: 14px;
     height: 14px;
+}
+
+.btn-icon {
+    font-size: 1rem;
 }
 
 .btn-primary {
@@ -422,19 +431,25 @@ body {
 
 /* Main Content */
 .main-content {
-    display: flex;
     flex: 1;
-    max-width: 1600px;
-    margin: 0 auto;
-    width: 100%;
     padding: 1.5rem;
-    gap: 1.5rem;
+    overflow-y: auto;
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--primary-lighter) 50%, var(--gray-100) 100%);
 }
 
 /* Sidebar */
 .sidebar {
     width: 280px;
     flex-shrink: 0;
+    background: var(--white);
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    overflow-y: auto;
+    padding: 1rem;
 }
 
 .sidebar-section {
@@ -447,19 +462,71 @@ body {
 
 .sidebar-header {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: 0.5rem;
-    padding: 1rem;
-    font-weight: 600;
-    color: var(--gray-700);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
     border-bottom: 1px solid var(--gray-100);
-    background: linear-gradient(to right, var(--gray-50), var(--white));
+}
+
+.sidebar-header .logo {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-800);
 }
 
 .sidebar-header svg {
     width: 18px;
     height: 18px;
     color: var(--primary);
+}
+
+.sidebar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.new-prompt-btn {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.search-container {
+    margin-bottom: 1rem;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    background: var(--white);
+    transition: all var(--transition-fast);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.categories-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.categories-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 .add-category-btn {
@@ -619,43 +686,6 @@ body {
 .content-area {
     flex: 1;
     min-width: 0;
-}
-
-/* Search */
-.search-container {
-    position: relative;
-    margin-bottom: 1.5rem;
-}
-
-.search-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 20px;
-    height: 20px;
-    color: var(--gray-400);
-}
-
-.search-input {
-    width: 100%;
-    padding: 0.875rem 1rem 0.875rem 2.75rem;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--border-radius-xl);
-    font-size: 0.9375rem;
-    background: var(--white);
-    transition: all var(--transition-fast);
-    box-shadow: var(--shadow-sm);
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--primary-light), var(--shadow-md);
-}
-
-.search-input::placeholder {
-    color: var(--gray-400);
 }
 
 /* Prompts List */
@@ -1072,6 +1102,34 @@ body {
     gap: 1rem;
 }
 
+.metadata-details {
+    margin-top: 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+}
+
+.metadata-details summary {
+    padding: 0.75rem 1rem;
+    background: var(--gray-50);
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--gray-700);
+    transition: all var(--transition-fast);
+}
+
+.metadata-details summary:hover {
+    background: var(--gray-100);
+}
+
+.metadata-details[open] summary {
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.metadata-content {
+    padding: 1rem;
+}
+
 .metadata-section {
     background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary-lighter) 100%);
     padding: 1rem;
@@ -1158,21 +1216,16 @@ body {
 
 /* Responsive */
 @media (max-width: 1024px) {
-    .header-content {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .header-actions {
-        justify-content: flex-start;
-    }
-
-    .main-content {
+    .app-container {
         flex-direction: column;
     }
 
     .sidebar {
         width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid var(--gray-200);
     }
 
     .category-list {
