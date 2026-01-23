@@ -7,63 +7,69 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h1 class="logo">Prompt-Bibliothek JF</h1>
-                <div class="backup-status" id="backupStatus">
-                    <span class="backup-dot"></span>
-                    <span class="backup-text">Wird geladen...</span>
+    <div class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <h1>Prompt-Bibliothek <span class="logo-suffix">JF</span></h1>
                 </div>
-            </div>
-
-            <div class="sidebar-actions">
-                <button class="btn btn-ghost btn-sm" onclick="loadFromCloud()">
-                    <span class="btn-icon">↓</span> Aus Cloud laden
-                </button>
-                <button class="btn btn-ghost btn-sm" onclick="saveToCloud()">
-                    <span class="btn-icon">↑</span> Cloud-Backup
-                </button>
-                <div class="dropdown">
-                    <button class="btn btn-ghost btn-sm" onclick="toggleExportDropdown()">
-                        <span class="btn-icon">📤</span> Export
-                    </button>
-                    <div class="dropdown-menu" id="exportDropdown">
-                        <button class="dropdown-item" onclick="exportMarkdown()">Alle als Markdown</button>
-                        <button class="dropdown-item" onclick="exportJSON()">Alle als JSON</button>
+                <div class="header-actions">
+                    <div class="backup-status" id="backupStatus">
+                        <span class="backup-dot"></span>
+                        <span class="backup-text">Wird geladen...</span>
                     </div>
+                    <button class="btn btn-ghost btn-sm" onclick="loadFromCloud()">
+                        <span class="btn-icon">↓</span> Aus Cloud laden
+                    </button>
+                    <button class="btn btn-ghost btn-sm" onclick="saveToCloud()">
+                        <span class="btn-icon">↑</span> Cloud-Backup
+                    </button>
+                    <div class="dropdown">
+                        <button class="btn btn-ghost btn-sm" onclick="toggleExportDropdown()">
+                            <span class="btn-icon">📤</span> Export
+                        </button>
+                        <div class="dropdown-menu" id="exportDropdown">
+                            <button class="dropdown-item" onclick="exportMarkdown()">Alle als Markdown</button>
+                            <button class="dropdown-item" onclick="exportJSON()">Alle als JSON</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-ghost btn-sm" onclick="importJSON()">
+                        <span class="btn-icon">📥</span> Import
+                    </button>
+                    <button class="btn btn-primary" onclick="openAddPromptModal()">
+                        <span class="btn-icon">+</span> Neuer Prompt
+                    </button>
                 </div>
-                <button class="btn btn-ghost btn-sm" onclick="importJSON()">
-                    <span class="btn-icon">📥</span> Import
-                </button>
             </div>
+        </header>
 
-            <button class="btn btn-primary new-prompt-btn" onclick="openAddPromptModal()">
-                <span class="btn-icon">+</span> Neuer Prompt
-            </button>
-
-            <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Prompts durchsuchen..." oninput="filterPrompts()">
-            </div>
-
-            <nav class="categories-nav">
-                <h2 class="categories-title">Kategorien</h2>
-                <div class="category-list" id="categoryList">
-                    <!-- Kategorien werden hier dynamisch eingefügt -->
+        <!-- Main Container -->
+        <div class="app-container">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="search-container">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Prompts durchsuchen..." oninput="filterPrompts()">
                 </div>
-                <button class="btn btn-ghost add-category-btn" onclick="openAddCategoryModal()">
-                    <span class="btn-icon">+</span> Neue Kategorie
-                </button>
-            </nav>
-        </aside>
 
-        <!-- Hauptbereich -->
-        <main class="main-content">
-            <div class="prompts-list" id="promptsList">
-                <!-- Prompts werden hier dynamisch eingefügt -->
-            </div>
-        </main>
+                <nav class="categories-nav">
+                    <h2 class="categories-title">Kategorien</h2>
+                    <div class="category-list" id="categoryList">
+                        <!-- Kategorien werden hier dynamisch eingefügt -->
+                    </div>
+                    <button class="btn btn-ghost add-category-btn" onclick="openAddCategoryModal()">
+                        <span class="btn-icon">+</span> Neue Kategorie
+                    </button>
+                </nav>
+            </aside>
+
+            <!-- Hauptbereich -->
+            <main class="main-content">
+                <div class="prompts-list" id="promptsList">
+                    <!-- Prompts werden hier dynamisch eingefügt -->
+                </div>
+            </main>
+        </div>
     </div>
 
     <!-- Modal: Neuer/Bearbeiten Prompt -->
