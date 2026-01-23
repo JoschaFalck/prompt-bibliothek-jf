@@ -410,13 +410,14 @@ body {
 
 /* View Modal Move Dropdown */
 .view-move-dropdown {
-    margin-left: auto;
+    margin-left: 0;
 }
 
 .view-move-dropdown .dropdown-menu {
     left: 0;
     right: auto;
-    min-width: 250px;
+    min-width: 220px;
+    max-width: 280px;
     max-height: 350px;
     overflow-y: auto;
 }
@@ -429,12 +430,6 @@ body {
 }
 
 /* Move Dropdown in View Modal Meta */
-.view-prompt-meta .dropdown-menu {
-    min-width: 250px;
-    max-height: 350px;
-    overflow-y: auto;
-}
-
 .view-prompt-meta .dropdown-item {
     white-space: normal;
     word-wrap: break-word;
@@ -1063,6 +1058,17 @@ body {
     gap: 0.5rem;
     margin-bottom: 1rem;
     align-items: center;
+}
+
+.view-prompt-meta .dropdown {
+    position: relative;
+}
+
+.view-prompt-meta .dropdown-menu {
+    left: auto;
+    right: 0;
+    min-width: 220px;
+    max-width: 280px;
 }
 
 .view-prompt-content {
