@@ -11,6 +11,7 @@ let currentViewPromptId = null;
 let lastBackupDate = null;
 let autoSaveTimeout = null;
 let isSyncing = false;
+let draggedCategoryIndex = null;
 
 // API Base URL (wird automatisch erkannt)
 const API_URL = '/.netlify/functions/prompts';
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!e.target.closest('.dropdown')) {
             closeExportDropdown();
             closeSingleExportDropdown();
+            closeMoveDropdown();
         }
     });
 });
@@ -254,6 +256,7 @@ function toggleExportDropdown() {
     const dropdown = document.getElementById('exportDropdown');
     dropdown.classList.toggle('active');
     closeSingleExportDropdown();
+    closeMoveDropdown();
 }
 
 function closeExportDropdown() {
@@ -265,11 +268,34 @@ function toggleSingleExportDropdown() {
     const dropdown = document.getElementById('singleExportDropdown');
     dropdown.classList.toggle('active');
     closeExportDropdown();
+    closeMoveDropdown();
 }
 
 function closeSingleExportDropdown() {
     const dropdown = document.getElementById('singleExportDropdown');
     dropdown.classList.remove('active');
+}
+
+function toggleMoveDropdown(id, event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById(`moveDropdown_${id}`);
+
+    // Close all other move dropdowns first
+    document.querySelectorAll('.move-dropdown').forEach(d => {
+        if (d.id !== `moveDropdown_${id}`) {
+            d.classList.remove('active');
+        }
+    });
+
+    dropdown.classList.toggle('active');
+    closeExportDropdown();
+    closeSingleExportDropdown();
+}
+
+function closeMoveDropdown() {
+    document.querySelectorAll('.move-dropdown').forEach(d => {
+        d.classList.remove('active');
+    });
 }
 
 // ========================================
@@ -286,27 +312,31 @@ function renderCategories() {
         </div>
     `;
 
-    // Category items with edit and move buttons
+    // Category items with drag & drop
     categories.forEach((cat, index) => {
         const count = prompts.filter(p => p.category === cat).length;
         html += `
-            <div class="category-item ${selectedCategory === cat ? 'active' : ''}" onclick="selectCategory('${escapeHtml(cat).replace(/'/g, "\\'")}')">
-                <span>${escapeHtml(cat)} (${count})</span>
+            <div class="category-item ${selectedCategory === cat ? 'active' : ''}"
+                 draggable="true"
+                 ondragstart="handleCategoryDragStart(event, ${index})"
+                 ondragover="handleCategoryDragOver(event)"
+                 ondragenter="handleCategoryDragEnter(event)"
+                 ondragleave="handleCategoryDragLeave(event)"
+                 ondrop="handleCategoryDrop(event, ${index})"
+                 ondragend="handleCategoryDragEnd(event)"
+                 onclick="selectCategory('${escapeHtml(cat).replace(/'/g, "\\'")}')">
+                <div class="category-drag-handle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="6" r="1"></circle>
+                        <circle cx="15" cy="6" r="1"></circle>
+                        <circle cx="9" cy="12" r="1"></circle>
+                        <circle cx="15" cy="12" r="1"></circle>
+                        <circle cx="9" cy="18" r="1"></circle>
+                        <circle cx="15" cy="18" r="1"></circle>
+                    </svg>
+                </div>
+                <span class="category-name">${escapeHtml(cat)} (${count})</span>
                 <div class="category-actions">
-                    ${index > 0 ? `
-                        <button class="category-action-btn move-btn" onclick="event.stopPropagation(); moveCategoryUp(${index})" title="Nach oben">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="18 15 12 9 6 15"></polyline>
-                            </svg>
-                        </button>
-                    ` : ''}
-                    ${index < categories.length - 1 ? `
-                        <button class="category-action-btn move-btn" onclick="event.stopPropagation(); moveCategoryDown(${index})" title="Nach unten">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                        </button>
-                    ` : ''}
                     <button class="category-action-btn edit-btn" onclick="event.stopPropagation(); openEditCategoryModal(${index})" title="Bearbeiten">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -328,6 +358,68 @@ function renderCategories() {
 
     // Update category dropdown in modal
     updateCategoryDropdown();
+}
+
+// ========================================
+// CATEGORY DRAG & DROP
+// ========================================
+
+function handleCategoryDragStart(event, index) {
+    draggedCategoryIndex = index;
+    event.target.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', index);
+}
+
+function handleCategoryDragOver(event) {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+}
+
+function handleCategoryDragEnter(event) {
+    event.preventDefault();
+    const item = event.target.closest('.category-item');
+    if (item && item.getAttribute('draggable') === 'true') {
+        item.classList.add('drag-over');
+    }
+}
+
+function handleCategoryDragLeave(event) {
+    const item = event.target.closest('.category-item');
+    if (item) {
+        item.classList.remove('drag-over');
+    }
+}
+
+function handleCategoryDrop(event, targetIndex) {
+    event.preventDefault();
+    const item = event.target.closest('.category-item');
+    if (item) {
+        item.classList.remove('drag-over');
+    }
+
+    if (draggedCategoryIndex === null || draggedCategoryIndex === targetIndex) {
+        return;
+    }
+
+    // Reorder categories
+    const draggedCategory = categories[draggedCategoryIndex];
+    categories.splice(draggedCategoryIndex, 1);
+    categories.splice(targetIndex, 0, draggedCategory);
+
+    saveToLocalStorage();
+    triggerAutoSave();
+    renderCategories();
+}
+
+function handleCategoryDragEnd(event) {
+    event.target.classList.remove('dragging');
+    draggedCategoryIndex = null;
+
+    // Remove drag-over class from all items
+    document.querySelectorAll('.category-item').forEach(item => {
+        item.classList.remove('drag-over');
+    });
 }
 
 function selectCategory(category) {
@@ -407,22 +499,6 @@ function addCategory() {
     saveCategory();
 }
 
-function moveCategoryUp(index) {
-    if (index <= 0) return;
-    [categories[index - 1], categories[index]] = [categories[index], categories[index - 1]];
-    saveToLocalStorage();
-    triggerAutoSave();
-    renderCategories();
-}
-
-function moveCategoryDown(index) {
-    if (index >= categories.length - 1) return;
-    [categories[index], categories[index + 1]] = [categories[index + 1], categories[index]];
-    saveToLocalStorage();
-    triggerAutoSave();
-    renderCategories();
-}
-
 function deleteCategory(category) {
     if (!confirm(`Kategorie "${category}" wirklich löschen? Die Prompts bleiben erhalten, verlieren aber ihre Kategorie.`)) {
         return;
@@ -446,6 +522,31 @@ function updateCategoryDropdown() {
     const select = document.getElementById('promptCategory');
     select.innerHTML = '<option value="">Kategorie wählen</option>' +
         categories.map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('');
+}
+
+// ========================================
+// MOVE PROMPT TO CATEGORY
+// ========================================
+
+function movePromptToCategory(promptId, newCategory) {
+    const prompt = prompts.find(p => p.id === promptId);
+    if (!prompt) return;
+
+    prompt.category = newCategory;
+    prompt.lastModified = new Date().toISOString();
+
+    saveToLocalStorage();
+    triggerAutoSave();
+    renderCategories();
+    renderPrompts();
+    closeMoveDropdown();
+
+    // Update view modal if open
+    if (currentViewPromptId === promptId) {
+        openViewModal(promptId);
+    }
+
+    showToast(`Prompt verschoben nach "${newCategory || 'Keine Kategorie'}"`);
 }
 
 // ========================================
@@ -489,6 +590,18 @@ function createPromptCard(prompt) {
     const variables = extractVariables(prompt.content);
     const hasVersions = prompt.versions && prompt.versions.length > 0;
 
+    // Build move dropdown options
+    const moveOptions = [
+        `<button class="dropdown-item" onclick="event.stopPropagation(); movePromptToCategory('${prompt.id}', '')">
+            <span class="move-option-none">Keine Kategorie</span>
+        </button>`,
+        ...categories.map(cat => `
+            <button class="dropdown-item ${prompt.category === cat ? 'active' : ''}" onclick="event.stopPropagation(); movePromptToCategory('${prompt.id}', '${escapeHtml(cat).replace(/'/g, "\\'")}')">
+                ${escapeHtml(cat)}
+            </button>
+        `)
+    ].join('');
+
     return `
         <div class="prompt-card">
             <div class="prompt-header">
@@ -514,6 +627,19 @@ function createPromptCard(prompt) {
                             <circle cx="12" cy="12" r="3"></circle>
                         </svg>
                     </button>
+                    <div class="dropdown move-dropdown-container">
+                        <button class="prompt-action-btn move" onclick="toggleMoveDropdown('${prompt.id}', event)" title="In Kategorie verschieben">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                <line x1="12" y1="11" x2="12" y2="17"></line>
+                                <polyline points="9 14 12 11 15 14"></polyline>
+                            </svg>
+                        </button>
+                        <div class="dropdown-menu move-dropdown" id="moveDropdown_${prompt.id}">
+                            <div class="dropdown-header">Verschieben nach:</div>
+                            ${moveOptions}
+                        </div>
+                    </div>
                     ${hasVersions ? `
                         <button class="prompt-action-btn" onclick="showVersionHistory('${prompt.id}')" title="${prompt.versions.length} Version(en)">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -573,10 +699,36 @@ function openViewModal(id) {
     const variables = extractVariables(prompt.content);
     const meta = prompt.metadata || {};
 
+    // Build move dropdown for view modal
+    const moveOptions = [
+        `<button class="dropdown-item" onclick="event.stopPropagation(); movePromptToCategory('${prompt.id}', ''); closeMoveDropdown();">
+            <span class="move-option-none">Keine Kategorie</span>
+        </button>`,
+        ...categories.map(cat => `
+            <button class="dropdown-item ${prompt.category === cat ? 'active' : ''}" onclick="event.stopPropagation(); movePromptToCategory('${prompt.id}', '${escapeHtml(cat).replace(/'/g, "\\'")}'); closeMoveDropdown();">
+                ${escapeHtml(cat)}
+            </button>
+        `)
+    ].join('');
+
     let html = `
         <div class="view-prompt-meta">
-            ${prompt.category ? `<span class="prompt-category">${escapeHtml(prompt.category)}</span>` : ''}
+            ${prompt.category ? `<span class="prompt-category">${escapeHtml(prompt.category)}</span>` : '<span class="prompt-category-none">Keine Kategorie</span>'}
             ${(prompt.tags || []).map(tag => `<span class="prompt-tag">${escapeHtml(tag)}</span>`).join('')}
+            <div class="dropdown view-move-dropdown">
+                <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation(); toggleViewMoveDropdown();">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        <line x1="12" y1="11" x2="12" y2="17"></line>
+                        <polyline points="9 14 12 11 15 14"></polyline>
+                    </svg>
+                    Verschieben
+                </button>
+                <div class="dropdown-menu" id="viewMoveDropdown">
+                    <div class="dropdown-header">Verschieben nach:</div>
+                    ${moveOptions}
+                </div>
+            </div>
         </div>
         <div class="view-prompt-content">${escapeHtml(prompt.content)}</div>
         <div class="view-prompt-info">
@@ -608,6 +760,11 @@ function openViewModal(id) {
     document.getElementById('viewModal').classList.add('active');
 }
 
+function toggleViewMoveDropdown() {
+    const dropdown = document.getElementById('viewMoveDropdown');
+    dropdown.classList.toggle('active');
+}
+
 function closeViewModal() {
     document.getElementById('viewModal').classList.remove('active');
     currentViewPromptId = null;
@@ -617,6 +774,12 @@ function closeViewModal() {
 function copyCurrentPrompt() {
     if (!currentViewPromptId) return;
     copyPrompt(currentViewPromptId);
+}
+
+function editCurrentPrompt() {
+    if (!currentViewPromptId) return;
+    closeViewModal();
+    editPrompt(currentViewPromptId);
 }
 
 // ========================================
@@ -1065,5 +1228,6 @@ function closeAllModals() {
     document.getElementById('viewModal').classList.remove('active');
     closeExportDropdown();
     closeSingleExportDropdown();
+    closeMoveDropdown();
     currentViewPromptId = null;
 }
