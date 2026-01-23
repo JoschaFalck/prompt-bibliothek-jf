@@ -12,9 +12,9 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h1 class="logo">Prompt-Bibliothek JF</h1>
-                <div class="sync-status" id="syncStatus">
-                    <span class="sync-icon">●</span>
-                    <span class="sync-text">Wird geladen...</span>
+                <div class="backup-status" id="backupStatus">
+                    <span class="backup-dot"></span>
+                    <span class="backup-text">Wird geladen...</span>
                 </div>
             </div>
 
@@ -22,39 +22,37 @@
                 <button class="btn btn-ghost btn-sm" onclick="loadFromCloud()">
                     <span class="btn-icon">↓</span> Aus Cloud laden
                 </button>
-                <button class="btn btn-ghost btn-sm" onclick="forceCloudBackup()">
+                <button class="btn btn-ghost btn-sm" onclick="saveToCloud()">
                     <span class="btn-icon">↑</span> Cloud-Backup
                 </button>
-                <div class="dropdown">
-                    <button class="btn btn-ghost btn-sm" onclick="toggleImportDropdown()">
-                        <span class="btn-icon">📥</span> Import
-                    </button>
-                    <div class="dropdown-menu" id="importDropdown">
-                        <button class="dropdown-item" onclick="importMarkdown()">Markdown importieren</button>
-                        <button class="dropdown-item" onclick="importJSON()">JSON importieren</button>
-                    </div>
-                </div>
                 <div class="dropdown">
                     <button class="btn btn-ghost btn-sm" onclick="toggleExportDropdown()">
                         <span class="btn-icon">📤</span> Export
                     </button>
                     <div class="dropdown-menu" id="exportDropdown">
-                        <button class="dropdown-item" onclick="exportAllAsMarkdown()">Alle als Markdown</button>
-                        <button class="dropdown-item" onclick="exportAllAsJSON()">Alle als JSON</button>
+                        <button class="dropdown-item" onclick="exportMarkdown()">Alle als Markdown</button>
+                        <button class="dropdown-item" onclick="exportJSON()">Alle als JSON</button>
                     </div>
                 </div>
+                <button class="btn btn-ghost btn-sm" onclick="importJSON()">
+                    <span class="btn-icon">📥</span> Import
+                </button>
             </div>
 
-            <button class="btn btn-primary new-prompt-btn" onclick="openModal()">
+            <button class="btn btn-primary new-prompt-btn" onclick="openAddPromptModal()">
                 <span class="btn-icon">+</span> Neuer Prompt
             </button>
 
+            <div class="search-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Prompts durchsuchen..." oninput="filterPrompts()">
+            </div>
+
             <nav class="categories-nav">
                 <h2 class="categories-title">Kategorien</h2>
-                <ul class="categories-list" id="categoriesList">
+                <div class="category-list" id="categoryList">
                     <!-- Kategorien werden hier dynamisch eingefügt -->
-                </ul>
-                <button class="btn btn-ghost add-category-btn" onclick="openCategoryModal()">
+                </div>
+                <button class="btn btn-ghost add-category-btn" onclick="openAddCategoryModal()">
                     <span class="btn-icon">+</span> Neue Kategorie
                 </button>
             </nav>
@@ -62,7 +60,7 @@
 
         <!-- Hauptbereich -->
         <main class="main-content">
-            <div class="prompts-grid" id="promptsGrid">
+            <div class="prompts-list" id="promptsList">
                 <!-- Prompts werden hier dynamisch eingefügt -->
             </div>
         </main>
@@ -70,10 +68,10 @@
 
     <!-- Modal: Neuer/Bearbeiten Prompt -->
     <div class="modal-overlay" id="promptModal">
-        <div class="modal">
+        <div class="modal modal-large">
             <div class="modal-header">
                 <h2 class="modal-title" id="modalTitle">Neuer Prompt</h2>
-                <button class="modal-close" onclick="closeModal()">&times;</button>
+                <button class="modal-close" onclick="closePromptModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="promptId">
@@ -123,45 +121,57 @@
                 <details class="metadata-details">
                     <summary>Metadaten (optional)</summary>
                     <div class="metadata-content">
-                        <div class="form-group">
-                            <label for="promptDifficulty">Schwierigkeitsgrad</label>
-                            <select id="promptDifficulty" class="form-select">
-                                <option value="beginner">Einfach</option>
-                                <option value="intermediate">Mittel</option>
-                                <option value="advanced">Fortgeschritten</option>
-                            </select>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="metaTargetAudience">Zielgruppe</label>
+                                <input type="text" id="metaTargetAudience" class="form-input" placeholder="z.B. Lehrkräfte, Schüler">
+                            </div>
+                            <div class="form-group">
+                                <label for="metaSubject">Fachbereich</label>
+                                <input type="text" id="metaSubject" class="form-input" placeholder="z.B. Mathematik, Deutsch">
+                            </div>
                         </div>
-
-                        <div class="form-group">
-                            <label for="promptNotes">Notizen</label>
-                            <textarea id="promptNotes" class="form-textarea" rows="3" placeholder="Zusätzliche Notizen..."></textarea>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="metaDifficulty">Schwierigkeitsgrad</label>
+                                <select id="metaDifficulty" class="form-select">
+                                    <option value="Einfach">Einfach</option>
+                                    <option value="Mittel" selected>Mittel</option>
+                                    <option value="Fortgeschritten">Fortgeschritten</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="metaTimeRequired">Zeitaufwand</label>
+                                <input type="text" id="metaTimeRequired" class="form-input" placeholder="z.B. 5 Minuten">
+                            </div>
                         </div>
                     </div>
                 </details>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
+                <button class="btn btn-ghost" onclick="closePromptModal()">Abbrechen</button>
                 <button class="btn btn-primary" onclick="savePrompt()">Speichern</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Neue Kategorie -->
+    <!-- Modal: Neue/Bearbeiten Kategorie -->
     <div class="modal-overlay" id="categoryModal">
         <div class="modal modal-small">
             <div class="modal-header">
-                <h2 class="modal-title">Neue Kategorie</h2>
+                <h2 class="modal-title" id="categoryModalTitle">Neue Kategorie</h2>
                 <button class="modal-close" onclick="closeCategoryModal()">&times;</button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="editCategoryIndex">
                 <div class="form-group">
-                    <label for="categoryName">Kategoriename</label>
-                    <input type="text" id="categoryName" class="form-input" placeholder="z.B. Kreatives Schreiben">
+                    <label for="newCategoryName">Kategoriename</label>
+                    <input type="text" id="newCategoryName" class="form-input" placeholder="z.B. Kreatives Schreiben">
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeCategoryModal()">Abbrechen</button>
-                <button class="btn btn-primary" onclick="saveCategory()">Hinzufügen</button>
+                <button class="btn btn-primary" id="categoryModalSaveBtn" onclick="saveCategory()">Hinzufügen</button>
             </div>
         </div>
     </div>
@@ -186,52 +196,42 @@
     </div>
 
     <!-- Modal: Versionshistorie -->
-    <div class="modal-overlay" id="versionsModal">
+    <div class="modal-overlay" id="versionModal">
         <div class="modal modal-large">
             <div class="modal-header">
                 <h2 class="modal-title">Versionshistorie</h2>
-                <button class="modal-close" onclick="closeVersionsModal()">&times;</button>
+                <button class="modal-close" onclick="closeVersionModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <div id="versionsList" class="versions-list">
+                <div id="versionList" class="version-list">
                     <!-- Versionen werden hier dynamisch eingefügt -->
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeVersionsModal()">Schließen</button>
+                <button class="btn btn-ghost" onclick="closeVersionModal()">Schließen</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal: Prompt ansehen -->
+    <!-- Modal: Prompt ansehen (Vollansicht) -->
     <div class="modal-overlay" id="viewModal">
         <div class="modal modal-large">
             <div class="modal-header">
                 <h2 class="modal-title" id="viewModalTitle">Prompt ansehen</h2>
                 <button class="modal-close" onclick="closeViewModal()">&times;</button>
             </div>
-            <div class="modal-body">
-                <div id="viewModalContent">
-                    <!-- Prompt-Inhalt wird hier dynamisch eingefügt -->
-                </div>
+            <div class="modal-body" id="viewModalBody">
+                <!-- Prompt-Inhalt wird hier dynamisch eingefügt -->
             </div>
             <div class="modal-footer">
                 <div class="view-modal-actions">
                     <div class="dropdown">
-                        <button class="btn btn-ghost btn-sm" onclick="toggleViewExportDropdown()">
+                        <button class="btn btn-ghost btn-sm" onclick="toggleSingleExportDropdown()">
                             <span class="btn-icon">📤</span> Exportieren
                         </button>
-                        <div class="dropdown-menu" id="viewExportDropdown">
-                            <button class="dropdown-item" onclick="exportCurrentAsMarkdown()">Als Markdown</button>
-                            <button class="dropdown-item" onclick="exportCurrentAsJSON()">Als JSON</button>
-                        </div>
-                    </div>
-                    <div class="move-dropdown-container">
-                        <button class="btn btn-ghost btn-sm" onclick="toggleViewMoveDropdown()">
-                            <span class="btn-icon">📁</span> Verschieben
-                        </button>
-                        <div class="dropdown-menu view-move-dropdown" id="viewMoveDropdown">
-                            <!-- Kategorien werden dynamisch eingefügt -->
+                        <div class="dropdown-menu" id="singleExportDropdown">
+                            <button class="dropdown-item" onclick="exportSinglePromptMD()">Als Markdown</button>
+                            <button class="dropdown-item" onclick="exportSinglePromptJSON()">Als JSON</button>
                         </div>
                     </div>
                 </div>
@@ -245,11 +245,12 @@
     </div>
 
     <!-- Toast-Benachrichtigung -->
-    <div class="toast" id="toast"></div>
+    <div class="toast" id="toast">
+        <span id="toastMessage"></span>
+    </div>
 
-    <!-- Versteckte File-Inputs für Import -->
-    <input type="file" id="importMarkdownInput" accept=".md,.txt" style="display: none" onchange="handleMarkdownImport(event)">
-    <input type="file" id="importJSONInput" accept=".json" style="display: none" onchange="handleJSONImport(event)">
+    <!-- Versteckter File-Input für Import -->
+    <input type="file" id="fileInput" accept=".json" style="display: none" onchange="handleFileImport(event)">
 
     <script src="app.js"></script>
 </body>
