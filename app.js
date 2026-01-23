@@ -1231,3 +1231,63 @@ function closeAllModals() {
     closeMoveDropdown();
     currentViewPromptId = null;
 }
+
+// ========================================
+// SIDEBAR RESIZER
+// ========================================
+
+function initSidebarResizer() {
+    const sidebar = document.getElementById('sidebar');
+    const resizer = document.getElementById('sidebarResizer');
+
+    if (!sidebar || !resizer) return;
+
+    // Gespeicherte Breite laden
+    const savedWidth = localStorage.getItem('sidebarWidth');
+    if (savedWidth) {
+        sidebar.style.setProperty('--sidebar-width', savedWidth + 'px');
+        sidebar.style.width = savedWidth + 'px';
+    }
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        startX = e.clientX;
+        startWidth = sidebar.offsetWidth;
+        resizer.classList.add('dragging');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+
+        const diff = e.clientX - startX;
+        let newWidth = startWidth + diff;
+
+        // Min/Max Grenzen
+        newWidth = Math.max(220, Math.min(500, newWidth));
+
+        sidebar.style.setProperty('--sidebar-width', newWidth + 'px');
+        sidebar.style.width = newWidth + 'px';
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (!isResizing) return;
+
+        isResizing = false;
+        resizer.classList.remove('dragging');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+
+        // Breite speichern
+        localStorage.setItem('sidebarWidth', sidebar.offsetWidth);
+    });
+}
+
+// Resizer beim Start initialisieren
+document.addEventListener('DOMContentLoaded', initSidebarResizer);
