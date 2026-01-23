@@ -5,269 +5,178 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Prompt-Bibliothek JF</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                        <polyline points="10 9 9 9 8 9"></polyline>
-                    </svg>
-                    <h1>Prompt-Bibliothek <span class="logo-suffix">JF</span></h1>
-                </div>
-
-                <div class="header-actions">
-                    <div class="backup-status" id="backupStatus">
-                        <span class="backup-dot"></span>
-                        <span class="backup-text">Wird geladen...</span>
-                    </div>
-
-                    <button class="btn btn-secondary" onclick="loadFromCloud()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="23 4 23 10 17 10"></polyline>
-                            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
-                        </svg>
-                        Aus Cloud laden
-                    </button>
-
-                    <button class="btn btn-primary-dark" onclick="saveToCloud()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
-                        </svg>
-                        Cloud-Backup
-                    </button>
-
-                    <button class="btn btn-ghost" onclick="importJSON()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                        Import
-                    </button>
-
-                    <!-- Export Dropdown -->
-                    <div class="dropdown">
-                        <button class="btn btn-ghost dropdown-trigger" onclick="toggleExportDropdown()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Export
-                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                        </button>
-                        <div class="dropdown-menu" id="exportDropdown">
-                            <button class="dropdown-item" onclick="exportMarkdown(); closeExportDropdown()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                </svg>
-                                Alle als Markdown
-                            </button>
-                            <button class="dropdown-item" onclick="exportJSON(); closeExportDropdown()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                </svg>
-                                Alle als JSON
-                            </button>
-                        </div>
-                    </div>
-
-                    <button class="btn btn-primary" onclick="openAddPromptModal()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                        Neuer Prompt
-                    </button>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="logo">Prompt-Bibliothek JF</h1>
+                <div class="sync-status" id="syncStatus">
+                    <span class="sync-icon">●</span>
+                    <span class="sync-text">Wird geladen...</span>
                 </div>
             </div>
-        </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Sidebar -->
-            <aside class="sidebar">
-                <div class="sidebar-section">
-                    <div class="sidebar-header">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
-                        </svg>
-                        <span>Kategorien</span>
-                        <button class="add-category-btn" onclick="openAddCategoryModal()" title="Kategorie hinzufügen">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                        </button>
+            <div class="sidebar-actions">
+                <button class="btn btn-ghost btn-sm" onclick="loadFromCloud()">
+                    <span class="btn-icon">↓</span> Aus Cloud laden
+                </button>
+                <button class="btn btn-ghost btn-sm" onclick="forceCloudBackup()">
+                    <span class="btn-icon">↑</span> Cloud-Backup
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-ghost btn-sm" onclick="toggleImportDropdown()">
+                        <span class="btn-icon">📥</span> Import
+                    </button>
+                    <div class="dropdown-menu" id="importDropdown">
+                        <button class="dropdown-item" onclick="importMarkdown()">Markdown importieren</button>
+                        <button class="dropdown-item" onclick="importJSON()">JSON importieren</button>
                     </div>
-                    <nav class="category-list" id="categoryList">
-                        <!-- Categories will be rendered here -->
-                    </nav>
                 </div>
-            </aside>
+                <div class="dropdown">
+                    <button class="btn btn-ghost btn-sm" onclick="toggleExportDropdown()">
+                        <span class="btn-icon">📤</span> Export
+                    </button>
+                    <div class="dropdown-menu" id="exportDropdown">
+                        <button class="dropdown-item" onclick="exportAllAsMarkdown()">Alle als Markdown</button>
+                        <button class="dropdown-item" onclick="exportAllAsJSON()">Alle als JSON</button>
+                    </div>
+                </div>
+            </div>
 
-            <!-- Content Area -->
-            <div class="content-area">
-                <!-- Search Bar -->
-                <div class="search-container">
-                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <input type="text" class="search-input" id="searchInput" placeholder="Suche nach Titel, Inhalt, Tags oder Zielen..." oninput="filterPrompts()">
-                </div>
+            <button class="btn btn-primary new-prompt-btn" onclick="openModal()">
+                <span class="btn-icon">+</span> Neuer Prompt
+            </button>
 
-                <!-- Prompts List -->
-                <div class="prompts-list" id="promptsList">
-                    <!-- Prompts will be rendered here -->
-                </div>
+            <nav class="categories-nav">
+                <h2 class="categories-title">Kategorien</h2>
+                <ul class="categories-list" id="categoriesList">
+                    <!-- Kategorien werden hier dynamisch eingefügt -->
+                </ul>
+                <button class="btn btn-ghost add-category-btn" onclick="openCategoryModal()">
+                    <span class="btn-icon">+</span> Neue Kategorie
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Hauptbereich -->
+        <main class="main-content">
+            <div class="prompts-grid" id="promptsGrid">
+                <!-- Prompts werden hier dynamisch eingefügt -->
             </div>
         </main>
     </div>
 
-    <!-- Add/Edit Prompt Modal -->
+    <!-- Modal: Neuer/Bearbeiten Prompt -->
     <div class="modal-overlay" id="promptModal">
         <div class="modal">
             <div class="modal-header">
-                <h2 id="modalTitle">Neuer Prompt</h2>
-                <button class="modal-close" onclick="closePromptModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <h2 class="modal-title" id="modalTitle">Neuer Prompt</h2>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <input type="hidden" id="promptId">
 
                 <div class="form-group">
                     <label for="promptTitle">Titel</label>
-                    <input type="text" id="promptTitle" placeholder="Z.B. Feedback zu Schülertexten">
+                    <input type="text" id="promptTitle" class="form-input" placeholder="Prompt-Titel eingeben">
                 </div>
 
                 <div class="form-group">
-                    <label for="promptContent">
-                        Prompt-Inhalt
-                        <span class="label-hint">(Variablen: <code>{{variable}}</code>)</span>
-                    </label>
-                    <textarea id="promptContent" rows="10" placeholder="Dein Prompt hier... Nutze {{variable}} für dynamische Platzhalter."></textarea>
+                    <label for="promptContent">Prompt-Inhalt (Variablen: {{variable}})</label>
+                    <textarea id="promptContent" class="form-textarea" rows="10" placeholder="Prompt hier eingeben..."></textarea>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="promptCategory">Kategorie</label>
-                        <select id="promptCategory">
+                        <select id="promptCategory" class="form-select">
                             <option value="">Kategorie wählen</option>
                         </select>
                     </div>
+
                     <div class="form-group">
                         <label for="promptTags">Tags (kommagetrennt)</label>
-                        <input type="text" id="promptTags" placeholder="Mathematik, Klasse 7, ...">
+                        <input type="text" id="promptTags" class="form-input" placeholder="tag1, tag2, tag3">
                     </div>
                 </div>
 
                 <div class="form-row">
                     <div class="form-group">
                         <label for="promptLicense">Lizenz</label>
-                        <select id="promptLicense">
+                        <select id="promptLicense" class="form-select">
                             <option value="CC BY 4.0">CC BY 4.0</option>
                             <option value="CC BY-SA 4.0">CC BY-SA 4.0</option>
                             <option value="CC BY-NC 4.0">CC BY-NC 4.0</option>
                             <option value="CC0 1.0">CC0 1.0</option>
-                            <option value="Eigene Angabe">Eigene Angabe</option>
+                            <option value="custom">Eigene Angabe</option>
                         </select>
                     </div>
+
                     <div class="form-group">
                         <label for="promptAuthor">Autor</label>
-                        <input type="text" id="promptAuthor" placeholder="Dein Name">
+                        <input type="text" id="promptAuthor" class="form-input" placeholder="Dein Name">
                     </div>
                 </div>
 
-                <div class="metadata-section">
-                    <h4>Metadaten (optional)</h4>
-                    <div class="form-row">
+                <details class="metadata-details">
+                    <summary>Metadaten (optional)</summary>
+                    <div class="metadata-content">
                         <div class="form-group">
-                            <input type="text" id="metaTargetAudience" placeholder="Zielgruppe (z.B. Lehrkräfte)">
-                        </div>
-                        <div class="form-group">
-                            <input type="text" id="metaSubject" placeholder="Fachbereich">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <select id="metaDifficulty">
-                                <option value="Einfach">Einfach</option>
-                                <option value="Mittel" selected>Mittel</option>
-                                <option value="Fortgeschritten">Fortgeschritten</option>
+                            <label for="promptDifficulty">Schwierigkeitsgrad</label>
+                            <select id="promptDifficulty" class="form-select">
+                                <option value="beginner">Einfach</option>
+                                <option value="intermediate">Mittel</option>
+                                <option value="advanced">Fortgeschritten</option>
                             </select>
                         </div>
+
                         <div class="form-group">
-                            <input type="text" id="metaTimeRequired" placeholder="Zeitaufwand (z.B. 5 Min)">
+                            <label for="promptNotes">Notizen</label>
+                            <textarea id="promptNotes" class="form-textarea" rows="3" placeholder="Zusätzliche Notizen..."></textarea>
                         </div>
                     </div>
-                </div>
+                </details>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closePromptModal()">Abbrechen</button>
+                <button class="btn btn-ghost" onclick="closeModal()">Abbrechen</button>
                 <button class="btn btn-primary" onclick="savePrompt()">Speichern</button>
             </div>
         </div>
     </div>
 
-    <!-- Add/Edit Category Modal -->
+    <!-- Modal: Neue Kategorie -->
     <div class="modal-overlay" id="categoryModal">
         <div class="modal modal-small">
             <div class="modal-header">
-                <h2 id="categoryModalTitle">Neue Kategorie</h2>
-                <button class="modal-close" onclick="closeCategoryModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <h2 class="modal-title">Neue Kategorie</h2>
+                <button class="modal-close" onclick="closeCategoryModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <input type="hidden" id="editCategoryIndex" value="">
                 <div class="form-group">
-                    <label for="newCategoryName">Kategoriename</label>
-                    <input type="text" id="newCategoryName" placeholder="Z.B. Unterrichtsvorbereitung">
+                    <label for="categoryName">Kategoriename</label>
+                    <input type="text" id="categoryName" class="form-input" placeholder="z.B. Kreatives Schreiben">
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeCategoryModal()">Abbrechen</button>
-                <button class="btn btn-primary" id="categoryModalSaveBtn" onclick="saveCategory()">Hinzufügen</button>
+                <button class="btn btn-primary" onclick="saveCategory()">Hinzufügen</button>
             </div>
         </div>
     </div>
 
-    <!-- Variables Modal -->
+    <!-- Modal: Variablen ausfüllen -->
     <div class="modal-overlay" id="variablesModal">
-        <div class="modal modal-small">
+        <div class="modal">
             <div class="modal-header">
-                <h2>Variablen ausfüllen</h2>
-                <button class="modal-close" onclick="closeVariablesModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <h2 class="modal-title">Variablen ausfüllen</h2>
+                <button class="modal-close" onclick="closeVariablesModal()">&times;</button>
             </div>
-            <div class="modal-body" id="variablesForm">
-                <!-- Variable inputs will be rendered here -->
+            <div class="modal-body">
+                <div id="variablesForm">
+                    <!-- Variablen-Felder werden hier dynamisch eingefügt -->
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeVariablesModal()">Abbrechen</button>
@@ -276,81 +185,71 @@
         </div>
     </div>
 
-    <!-- Version History Modal -->
-    <div class="modal-overlay" id="versionModal">
-        <div class="modal">
+    <!-- Modal: Versionshistorie -->
+    <div class="modal-overlay" id="versionsModal">
+        <div class="modal modal-large">
             <div class="modal-header">
-                <h2>Versionshistorie</h2>
-                <button class="modal-close" onclick="closeVersionModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <h2 class="modal-title">Versionshistorie</h2>
+                <button class="modal-close" onclick="closeVersionsModal()">&times;</button>
             </div>
-            <div class="modal-body" id="versionList">
-                <!-- Versions will be rendered here -->
+            <div class="modal-body">
+                <div id="versionsList" class="versions-list">
+                    <!-- Versionen werden hier dynamisch eingefügt -->
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-ghost" onclick="closeVersionModal()">Schließen</button>
+                <button class="btn btn-ghost" onclick="closeVersionsModal()">Schließen</button>
             </div>
         </div>
     </div>
 
-    <!-- Prompt View Modal (Vollansicht) -->
+    <!-- Modal: Prompt ansehen -->
     <div class="modal-overlay" id="viewModal">
         <div class="modal modal-large">
             <div class="modal-header">
-                <h2 id="viewModalTitle">Prompt ansehen</h2>
-                <button class="modal-close" onclick="closeViewModal()">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
+                <h2 class="modal-title" id="viewModalTitle">Prompt ansehen</h2>
+                <button class="modal-close" onclick="closeViewModal()">&times;</button>
             </div>
-            <div class="modal-body" id="viewModalBody">
-                <!-- Prompt content will be rendered here -->
+            <div class="modal-body">
+                <div id="viewModalContent">
+                    <!-- Prompt-Inhalt wird hier dynamisch eingefügt -->
+                </div>
             </div>
             <div class="modal-footer">
                 <div class="view-modal-actions">
                     <div class="dropdown">
-                        <button class="btn btn-secondary dropdown-trigger" onclick="toggleSingleExportDropdown()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                <polyline points="7 10 12 15 17 10"></polyline>
-                                <line x1="12" y1="15" x2="12" y2="3"></line>
-                            </svg>
-                            Exportieren
-                            <svg class="dropdown-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
+                        <button class="btn btn-ghost btn-sm" onclick="toggleViewExportDropdown()">
+                            <span class="btn-icon">📤</span> Exportieren
                         </button>
-                        <div class="dropdown-menu dropdown-menu-up" id="singleExportDropdown">
-                            <button class="dropdown-item" onclick="exportSinglePromptMD(); closeSingleExportDropdown()">
-                                Als Markdown
-                            </button>
-                            <button class="dropdown-item" onclick="exportSinglePromptJSON(); closeSingleExportDropdown()">
-                                Als JSON
-                            </button>
+                        <div class="dropdown-menu" id="viewExportDropdown">
+                            <button class="dropdown-item" onclick="exportCurrentAsMarkdown()">Als Markdown</button>
+                            <button class="dropdown-item" onclick="exportCurrentAsJSON()">Als JSON</button>
+                        </div>
+                    </div>
+                    <div class="move-dropdown-container">
+                        <button class="btn btn-ghost btn-sm" onclick="toggleViewMoveDropdown()">
+                            <span class="btn-icon">📁</span> Verschieben
+                        </button>
+                        <div class="dropdown-menu view-move-dropdown" id="viewMoveDropdown">
+                            <!-- Kategorien werden dynamisch eingefügt -->
                         </div>
                     </div>
                 </div>
                 <div>
                     <button class="btn btn-ghost" onclick="closeViewModal()">Schließen</button>
+                    <button class="btn btn-secondary" onclick="editCurrentPrompt()">Bearbeiten</button>
                     <button class="btn btn-primary" onclick="copyCurrentPrompt()">Kopieren</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div class="toast" id="toast">
-        <span id="toastMessage"></span>
-    </div>
+    <!-- Toast-Benachrichtigung -->
+    <div class="toast" id="toast"></div>
 
-    <!-- Hidden file input for import -->
-    <input type="file" id="fileInput" accept=".json" style="display: none" onchange="handleFileImport(event)">
+    <!-- Versteckte File-Inputs für Import -->
+    <input type="file" id="importMarkdownInput" accept=".md,.txt" style="display: none" onchange="handleMarkdownImport(event)">
+    <input type="file" id="importJSONInput" accept=".json" style="display: none" onchange="handleJSONImport(event)">
 
     <script src="app.js"></script>
 </body>
