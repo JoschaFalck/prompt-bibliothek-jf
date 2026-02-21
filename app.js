@@ -12,6 +12,7 @@ let lastBackupDate = null;
 let autoSaveTimeout = null;
 let isSyncing = false;
 let draggedCategoryIndex = null;
+let currentSharePromptId = null;
 
 // API Base URL (wird automatisch erkannt)
 const API_URL = '/.netlify/functions/prompts';
@@ -21,6 +22,10 @@ const API_URL = '/.netlify/functions/prompts';
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Passwortschutz & Dark Mode initialisieren
+    initPasswordProtection();
+    initDarkMode();
+
     // Erst lokale Daten laden (als Fallback)
     loadFromLocalStorage();
     renderCategories();
@@ -29,6 +34,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Dann aus Cloud laden (überschreibt lokale Daten)
     await loadFromCloud(true); // true = silent mode (kein Toast)
+
+    // Share-URL-Parameter prüfen (nur wenn bereits eingeloggt)
+    if (sessionStorage.getItem('pb_auth') === '1') {
+        checkShareParam();
+    }
 
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -621,6 +631,27 @@ function createPromptCard(prompt) {
                     </div>
                 </div>
                 <div class="prompt-actions">
+                    <button class="prompt-action-btn ai-claude" onclick="openWithClaude('${prompt.id}')" title="Mit Claude öffnen">
+                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="16" height="16">
+                            <path d="M12 3 4.5 21h3.8l1.7-4.5h4l1.7 4.5h3.8L12 3zm0 5.8 1.5 5.2h-3z"/>
+                        </svg>
+                    </button>
+                    <button class="prompt-action-btn ai-chatgpt" onclick="openWithChatGPT('${prompt.id}')" title="Mit ChatGPT öffnen">
+                        <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" width="16" height="16">
+                            <path d="M11 2v8L4 6.5 3 8.3l7 3.7-7 3.7 1 1.8 7-3.5V22h2v-8l7 3.5 1-1.8-7-3.7 7-3.7-1-1.8L13 10V2z"/>
+                        </svg>
+                    </button>
+                    <button class="prompt-action-btn ai-qr" onclick="openShareModal('${prompt.id}')" title="QR-Code / Teilen">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                            <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none"></rect>
+                            <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none"></rect>
+                            <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none"></rect>
+                            <path d="M14 14h3M17 14v3M14 17h3M17 20h3M20 17v3"></path>
+                        </svg>
+                    </button>
                     <button class="prompt-action-btn view" onclick="openViewModal('${prompt.id}')" title="Vollansicht">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
@@ -1226,10 +1257,12 @@ function closeAllModals() {
     document.getElementById('variablesModal').classList.remove('active');
     document.getElementById('versionModal').classList.remove('active');
     document.getElementById('viewModal').classList.remove('active');
+    document.getElementById('shareModal').classList.remove('active');
     closeExportDropdown();
     closeSingleExportDropdown();
     closeMoveDropdown();
     currentViewPromptId = null;
+    currentSharePromptId = null;
 }
 
 // ========================================
@@ -1291,3 +1324,129 @@ function initSidebarResizer() {
 
 // Resizer beim Start initialisieren
 document.addEventListener('DOMContentLoaded', initSidebarResizer);
+
+// ========================================
+// PASSWORTSCHUTZ
+// ========================================
+
+function initPasswordProtection() {
+    if (sessionStorage.getItem('pb_auth') === '1') {
+        document.getElementById('passwordOverlay').classList.add('hidden');
+    }
+    // Overlay bleibt sichtbar (CSS default), bis Passwort korrekt
+}
+
+function checkPassword() {
+    const input = document.getElementById('passwordInput').value;
+    if (input === 'pbjf') {
+        sessionStorage.setItem('pb_auth', '1');
+        document.getElementById('passwordOverlay').classList.add('hidden');
+        checkShareParam(); // Share-Link nach Login auswerten
+    } else {
+        document.getElementById('passwordError').textContent = 'Falsches Passwort';
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').focus();
+    }
+}
+
+function handlePasswordKey(e) {
+    if (e.key === 'Enter') checkPassword();
+}
+
+// ========================================
+// DARK MODE
+// ========================================
+
+function initDarkMode() {
+    const saved = localStorage.getItem('pb_darkMode');
+    if (saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        const icon = document.getElementById('darkModeIcon');
+        if (icon) icon.textContent = '☀️';
+    }
+}
+
+function toggleDarkMode() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const icon = document.getElementById('darkModeIcon');
+    if (isDark) {
+        document.documentElement.removeAttribute('data-theme');
+        localStorage.setItem('pb_darkMode', 'light');
+        if (icon) icon.textContent = '🌙';
+    } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        localStorage.setItem('pb_darkMode', 'dark');
+        if (icon) icon.textContent = '☀️';
+    }
+}
+
+// ========================================
+// KI-BUTTONS: Claude & ChatGPT
+// ========================================
+
+function openWithClaude(id) {
+    const prompt = prompts.find(p => p.id === id);
+    if (!prompt) return;
+    navigator.clipboard.writeText(prompt.content).catch(() => {});
+    window.open('https://claude.ai/new', '_blank');
+    showToast('Prompt kopiert – Claude wird geöffnet!');
+}
+
+function openWithChatGPT(id) {
+    const prompt = prompts.find(p => p.id === id);
+    if (!prompt) return;
+    navigator.clipboard.writeText(prompt.content).catch(() => {});
+    window.open('https://chatgpt.com/', '_blank');
+    showToast('Prompt kopiert – ChatGPT wird geöffnet!');
+}
+
+// ========================================
+// SHARE-MODAL (QR-Code / Read-only)
+// ========================================
+
+function openShareModal(id) {
+    const prompt = prompts.find(p => p.id === id);
+    if (!prompt) return;
+
+    currentSharePromptId = id;
+    document.getElementById('shareModalTitle').textContent = prompt.title;
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?share=${id}`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=1e293b&margin=8`;
+
+    document.getElementById('shareModalBody').innerHTML = `
+        <div class="share-content">
+            <div class="share-prompt-text">${escapeHtml(prompt.content)}</div>
+            <div class="share-qr-section">
+                <img src="${qrUrl}" alt="QR-Code" class="share-qr-code" loading="lazy">
+                <div class="share-url-box">
+                    <p class="share-url-label">Teilbare URL</p>
+                    <code class="share-url">${escapeHtml(shareUrl)}</code>
+                    <p class="share-url-hint">QR-Code scannen oder URL teilen. Der Prompt-Text wird in die Zwischenablage kopiert, wenn auf „Prompt kopieren" geklickt wird.</p>
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('shareModal').classList.add('active');
+}
+
+function closeShareModal() {
+    document.getElementById('shareModal').classList.remove('active');
+    currentSharePromptId = null;
+}
+
+function copySharePrompt() {
+    if (!currentSharePromptId) return;
+    const prompt = prompts.find(p => p.id === currentSharePromptId);
+    if (!prompt) return;
+    navigator.clipboard.writeText(prompt.content).catch(() => {});
+    showToast('Prompt kopiert!');
+}
+
+function checkShareParam() {
+    const params = new URLSearchParams(window.location.search);
+    const shareId = params.get('share');
+    if (shareId && prompts.find(p => p.id === shareId)) {
+        openShareModal(shareId);
+    }
+}
