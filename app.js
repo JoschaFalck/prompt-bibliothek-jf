@@ -22,9 +22,8 @@ const API_URL = '/.netlify/functions/prompts';
 // ========================================
 
 document.addEventListener('DOMContentLoaded', async () => {
-    // Passwortschutz & Dark Mode initialisieren
+    // Passwortschutz initialisieren
     initPasswordProtection();
-    initDarkMode();
 
     // Erst lokale Daten laden (als Fallback)
     loadFromLocalStorage();
@@ -1387,17 +1386,23 @@ function toggleDarkMode() {
 function openWithClaude(id) {
     const prompt = prompts.find(p => p.id === id);
     if (!prompt) return;
-    navigator.clipboard.writeText(prompt.content).catch(() => {});
-    window.open('https://claude.ai/new', '_blank');
-    showToast('Prompt kopiert – Claude wird geöffnet!');
+    // Claude unterstützt ?q= zur direkten Vorbefüllung
+    const url = 'https://claude.ai/new?q=' + encodeURIComponent(prompt.content);
+    window.open(url, '_blank');
+    showToast('Claude wird mit dem Prompt geöffnet!');
 }
 
 function openWithChatGPT(id) {
     const prompt = prompts.find(p => p.id === id);
     if (!prompt) return;
-    navigator.clipboard.writeText(prompt.content).catch(() => {});
-    window.open('https://chatgpt.com/', '_blank');
-    showToast('Prompt kopiert – ChatGPT wird geöffnet!');
+    // Erst in Zwischenablage, dann ChatGPT öffnen
+    navigator.clipboard.writeText(prompt.content).then(() => {
+        window.open('https://chatgpt.com/', '_blank');
+        showToast('Prompt kopiert – bei ChatGPT einfügen (Strg+V / ⌘V)');
+    }).catch(() => {
+        window.open('https://chatgpt.com/', '_blank');
+        showToast('ChatGPT geöffnet – Prompt manuell einfügen');
+    });
 }
 
 // ========================================
@@ -1411,7 +1416,7 @@ function openShareModal(id) {
     currentSharePromptId = id;
     document.getElementById('shareModalTitle').textContent = prompt.title;
 
-    const shareUrl = `${window.location.origin}${window.location.pathname}?share=${id}`;
+    const shareUrl = `${window.location.origin}/share.html?id=${id}`;
     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(shareUrl)}&bgcolor=ffffff&color=1e293b&margin=8`;
 
     document.getElementById('shareModalBody').innerHTML = `
