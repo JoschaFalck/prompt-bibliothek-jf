@@ -7,6 +7,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Passwortschutz -->
+    <div class="password-overlay" id="passwordOverlay">
+        <div class="password-box">
+            <div class="password-logo">📚</div>
+            <h2>Prompt-Bibliothek JF</h2>
+            <p class="password-subtitle">Bitte Passwort eingeben</p>
+            <input type="password" id="passwordInput" class="password-input"
+                   placeholder="••••" onkeydown="handlePasswordKey(event)" autocomplete="current-password">
+            <button class="btn btn-primary password-btn" onclick="checkPassword()">Entsperren</button>
+            <p class="password-error" id="passwordError"></p>
+        </div>
+    </div>
+
     <div class="app">
         <!-- Header -->
         <header class="header">
@@ -41,6 +54,9 @@
                     <button class="btn btn-primary" onclick="openAddPromptModal()">
                         <span class="btn-icon">+</span> Neuer Prompt
                     </button>
+                    <button class="btn btn-ghost btn-icon-only" id="darkModeToggle" onclick="toggleDarkMode()" title="Dark Mode umschalten">
+                        <span id="darkModeIcon">🌙</span>
+                    </button>
                 </div>
             </div>
         </header>
@@ -72,6 +88,11 @@
                 </div>
             </main>
         </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Entwickelt mit Liebe ❤️ und <a href="https://claude.ai/code" target="_blank" rel="noopener">Claude Code</a> von Joscha Falck</p>
+        </footer>
     </div>
 
     <!-- Modal: Neuer/Bearbeiten Prompt -->
@@ -248,6 +269,23 @@
                     <button class="btn btn-secondary" onclick="editCurrentPrompt()">Bearbeiten</button>
                     <button class="btn btn-primary" onclick="copyCurrentPrompt()">Kopieren</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Prompt teilen (Read-only) -->
+    <div class="modal-overlay" id="shareModal">
+        <div class="modal modal-large">
+            <div class="modal-header">
+                <h2 class="modal-title" id="shareModalTitle">Prompt teilen</h2>
+                <button class="modal-close" onclick="closeShareModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="shareModalBody">
+                <!-- Inhalt wird dynamisch eingefügt -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeShareModal()">Schließen</button>
+                <button class="btn btn-primary" onclick="copySharePrompt()">📋 Prompt kopieren</button>
             </div>
         </div>
     </div>
