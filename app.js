@@ -13,6 +13,8 @@ let autoSaveTimeout = null;
 let isSyncing = false;
 let draggedCategoryIndex = null;
 let currentSharePromptId = null;
+let links = [];
+let showLinksView = false;
 
 // API Base URL (wird automatisch erkannt)
 const API_URL = '/.netlify/functions/prompts';
@@ -63,6 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function loadFromLocalStorage() {
     const savedPrompts = localStorage.getItem('prompts');
     const savedCategories = localStorage.getItem('categories');
+    const savedLinks = localStorage.getItem('links');
     const savedBackupDate = localStorage.getItem('lastBackupDate');
 
     if (savedPrompts) {
@@ -70,6 +73,9 @@ function loadFromLocalStorage() {
     }
     if (savedCategories) {
         categories = JSON.parse(savedCategories);
+    }
+    if (savedLinks) {
+        links = JSON.parse(savedLinks);
     }
     if (savedBackupDate) {
         lastBackupDate = new Date(savedBackupDate);
@@ -79,6 +85,7 @@ function loadFromLocalStorage() {
 function saveToLocalStorage() {
     localStorage.setItem('prompts', JSON.stringify(prompts));
     localStorage.setItem('categories', JSON.stringify(categories));
+    localStorage.setItem('links', JSON.stringify(links));
     if (lastBackupDate) {
         localStorage.setItem('lastBackupDate', lastBackupDate.toISOString());
     }
@@ -122,6 +129,7 @@ async function saveToCloud(silent = false) {
             body: JSON.stringify({
                 prompts: prompts,
                 categories: categories,
+                links: links,
                 lastModified: new Date().toISOString()
             })
         });
@@ -180,11 +188,18 @@ async function loadFromCloud(silent = false) {
         if (data.categories && data.categories.length > 0) {
             categories = data.categories;
         }
+        if (data.links) {
+            links = data.links;
+        }
 
         lastBackupDate = new Date();
         saveToLocalStorage();
         renderCategories();
-        renderPrompts();
+        if (showLinksView) {
+            renderLinks();
+        } else {
+            renderPrompts();
+        }
         updateBackupStatus();
         updateSyncStatus('synced');
 
@@ -316,7 +331,7 @@ function renderCategories() {
 
     // "Alle Prompts" option
     let html = `
-        <div class="category-item ${selectedCategory === null ? 'active' : ''}" onclick="selectCategory(null)">
+        <div class="category-item ${!showLinksView && selectedCategory === null ? 'active' : ''}" onclick="selectCategory(null)">
             <span>Alle Prompts (${prompts.length})</span>
         </div>
     `;
@@ -325,7 +340,7 @@ function renderCategories() {
     categories.forEach((cat, index) => {
         const count = prompts.filter(p => p.category === cat).length;
         html += `
-            <div class="category-item ${selectedCategory === cat ? 'active' : ''}"
+            <div class="category-item ${!showLinksView && selectedCategory === cat ? 'active' : ''}"
                  draggable="true"
                  ondragstart="handleCategoryDragStart(event, ${index})"
                  ondragover="handleCategoryDragOver(event)"
@@ -364,6 +379,12 @@ function renderCategories() {
     });
 
     container.innerHTML = html;
+
+    // Update links nav item active state
+    const linksNavItem = document.getElementById('linksNavItem');
+    if (linksNavItem) {
+        linksNavItem.classList.toggle('active', showLinksView);
+    }
 
     // Update category dropdown in modal
     updateCategoryDropdown();
@@ -433,6 +454,7 @@ function handleCategoryDragEnd(event) {
 
 function selectCategory(category) {
     selectedCategory = category;
+    showLinksView = false;
     renderCategories();
     renderPrompts();
 }
@@ -1257,6 +1279,7 @@ function closeAllModals() {
     document.getElementById('versionModal').classList.remove('active');
     document.getElementById('viewModal').classList.remove('active');
     document.getElementById('shareModal').classList.remove('active');
+    document.getElementById('linkModal').classList.remove('active');
     closeExportDropdown();
     closeSingleExportDropdown();
     closeMoveDropdown();
@@ -1454,4 +1477,167 @@ function checkShareParam() {
     if (shareId && prompts.find(p => p.id === shareId)) {
         openShareModal(shareId);
     }
+}
+
+// ========================================
+// LINKS & MATERIALIEN
+// ========================================
+
+function selectLinksView() {
+    showLinksView = true;
+    selectedCategory = null;
+    renderCategories();
+    renderLinks();
+}
+
+function renderLinks() {
+    const container = document.getElementById('promptsList');
+
+    if (links.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">🔗</div>
+                <h3>Noch keine Links gespeichert</h3>
+                <p>Füge nützliche Links und Materialien hinzu.</p>
+                <button class="btn btn-primary" onclick="openAddLinkModal()">
+                    <span class="btn-icon">+</span> Ersten Link hinzufügen
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    let html = `
+        <div class="links-view-header">
+            <h2>Links & Materialien <span class="links-count">(${links.length})</span></h2>
+            <button class="btn btn-primary btn-sm" onclick="openAddLinkModal()">
+                <span class="btn-icon">+</span> Link hinzufügen
+            </button>
+        </div>
+        <div class="links-grid">
+    `;
+
+    links.forEach(link => {
+        html += createLinkCard(link);
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function createLinkCard(link) {
+    const domain = (() => {
+        try { return new URL(link.url).hostname; } catch (e) { return ''; }
+    })();
+    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=32` : '';
+
+    return `
+        <div class="link-card">
+            <div class="link-card-header">
+                ${faviconUrl
+                    ? `<img class="link-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">`
+                    : '<span class="link-favicon-placeholder">🔗</span>'}
+                <div class="link-card-title-row">
+                    <a class="link-card-title" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.title)}</a>
+                    <span class="link-card-domain">${escapeHtml(domain)}</span>
+                </div>
+            </div>
+            ${link.description ? `<p class="link-card-description">${escapeHtml(link.description)}</p>` : ''}
+            <div class="link-card-footer">
+                ${link.tag ? `<span class="link-tag">${escapeHtml(link.tag)}</span>` : '<span></span>'}
+                <div class="link-card-actions">
+                    <button class="prompt-action-btn" onclick="openEditLinkModal('${link.id}')" title="Bearbeiten">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+                    <button class="prompt-action-btn" onclick="deleteLink('${link.id}')" title="Löschen" style="color: var(--danger);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function openAddLinkModal() {
+    document.getElementById('linkModalTitle').textContent = 'Neuer Link';
+    document.getElementById('linkId').value = '';
+    document.getElementById('linkTitle').value = '';
+    document.getElementById('linkUrl').value = '';
+    document.getElementById('linkDescription').value = '';
+    document.getElementById('linkTag').value = '';
+    document.getElementById('linkModal').classList.add('active');
+    document.getElementById('linkUrl').focus();
+}
+
+function openEditLinkModal(id) {
+    const link = links.find(l => l.id === id);
+    if (!link) return;
+
+    document.getElementById('linkModalTitle').textContent = 'Link bearbeiten';
+    document.getElementById('linkId').value = link.id;
+    document.getElementById('linkTitle').value = link.title;
+    document.getElementById('linkUrl').value = link.url;
+    document.getElementById('linkDescription').value = link.description || '';
+    document.getElementById('linkTag').value = link.tag || '';
+    document.getElementById('linkModal').classList.add('active');
+    document.getElementById('linkTitle').focus();
+}
+
+function closeLinkModal() {
+    document.getElementById('linkModal').classList.remove('active');
+}
+
+function saveLinkEntry() {
+    const id = document.getElementById('linkId').value;
+    const title = document.getElementById('linkTitle').value.trim();
+    const url = document.getElementById('linkUrl').value.trim();
+    const description = document.getElementById('linkDescription').value.trim();
+    const tag = document.getElementById('linkTag').value.trim();
+
+    if (!title) {
+        showToast('Bitte einen Titel eingeben');
+        return;
+    }
+    if (!url) {
+        showToast('Bitte eine URL eingeben');
+        return;
+    }
+
+    const fullUrl = url.startsWith('http://') || url.startsWith('https://') ? url : 'https://' + url;
+
+    if (id) {
+        const idx = links.findIndex(l => l.id === id);
+        if (idx !== -1) {
+            links[idx] = { ...links[idx], title, url: fullUrl, description, tag };
+        }
+    } else {
+        links.push({
+            id: 'link_' + Date.now(),
+            title,
+            url: fullUrl,
+            description,
+            tag,
+            createdAt: new Date().toISOString()
+        });
+    }
+
+    closeLinkModal();
+    saveToLocalStorage();
+    triggerAutoSave();
+    renderLinks();
+    showToast(id ? 'Link aktualisiert!' : 'Link hinzugefügt!');
+}
+
+function deleteLink(id) {
+    links = links.filter(l => l.id !== id);
+    saveToLocalStorage();
+    triggerAutoSave();
+    renderLinks();
+    showToast('Link gelöscht');
 }
