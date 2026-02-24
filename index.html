@@ -76,6 +76,13 @@
                         <span class="btn-icon">+</span> Neue Kategorie
                     </button>
                 </nav>
+
+                <div class="links-nav-section">
+                    <div class="links-nav-item" id="linksNavItem" onclick="selectLinksView()">
+                        <span class="links-nav-icon">🔗</span>
+                        <span>Links & Materialien</span>
+                    </div>
+                </div>
             </aside>
 
             <!-- Hauptbereich -->
@@ -283,6 +290,40 @@
             <div class="modal-footer">
                 <button class="btn btn-ghost" onclick="closeShareModal()">Schließen</button>
                 <button class="btn btn-primary" onclick="copySharePrompt()">📋 Prompt kopieren</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Link hinzufügen/bearbeiten -->
+    <div class="modal-overlay" id="linkModal">
+        <div class="modal modal-small">
+            <div class="modal-header">
+                <h2 class="modal-title" id="linkModalTitle">Neuer Link</h2>
+                <button class="modal-close" onclick="closeLinkModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="linkId">
+                <div class="form-group">
+                    <label for="linkUrl">URL</label>
+                    <input type="text" id="linkUrl" class="form-input" placeholder="https://..."
+                           onkeydown="if(event.key==='Enter') document.getElementById('linkTitle').focus()">
+                </div>
+                <div class="form-group">
+                    <label for="linkTitle">Titel</label>
+                    <input type="text" id="linkTitle" class="form-input" placeholder="Beschreibender Titel">
+                </div>
+                <div class="form-group">
+                    <label for="linkDescription">Beschreibung (optional)</label>
+                    <input type="text" id="linkDescription" class="form-input" placeholder="Kurze Beschreibung">
+                </div>
+                <div class="form-group">
+                    <label for="linkTag">Tag (optional)</label>
+                    <input type="text" id="linkTag" class="form-input" placeholder="z.B. Artikel, Video, Tool">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-ghost" onclick="closeLinkModal()">Abbrechen</button>
+                <button class="btn btn-primary" onclick="saveLinkEntry()">Speichern</button>
             </div>
         </div>
     </div>
