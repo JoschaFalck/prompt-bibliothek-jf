@@ -52,6 +52,7 @@ export default async (req, context) => {
             const dataToSave = {
                 prompts: body.prompts,
                 categories: body.categories || [],
+                links: body.links || [],
                 lastModified: new Date().toISOString()
             };
 
